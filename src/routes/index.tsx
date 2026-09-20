@@ -86,6 +86,120 @@ function Dashboard() {
     setActive((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
   }
 
+  const TripBlock = () => (
+    <div className="border-b border-border bg-card p-4 sm:p-5">
+      <p className="section-label">Trajeto microterritorial</p>
+      <div className="mt-3 space-y-2">
+        <label className="route-input text-foreground">
+          <span className="origin-dot" />
+          <span>
+            <small className="text-muted-foreground">Origem</small>
+            Portão Principal — Campus CEFET/RJ
+          </span>
+        </label>
+        <label className="route-input text-foreground">
+          <MapPin className="size-4 shrink-0 text-primary" />
+          <span>
+            <small className="text-muted-foreground">Destino</small>
+            Biblioteca Central / Bloco E
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+
+  const ProfilesBlock = () => (
+    <div className="bg-card p-4 sm:p-5">
+      <p className="section-label">Perfil de mobilidade</p>
+      <div className={cn("mt-3 grid gap-2", phoneView ? "grid-cols-1" : "grid-cols-2")}>
+        {profiles.map((item) => {
+          const Icon = item.icon;
+          const selected = item.id === profile;
+          return (
+            <Button
+              key={item.id}
+              variant={selected ? "profileActive" : "profile"}
+              className="h-auto min-h-20 whitespace-normal p-3"
+              onClick={() => { setProfile(item.id); setActive([]); }}
+              aria-pressed={selected}
+            >
+              <Icon className="size-5 shrink-0" />
+              <span className="min-w-0 text-left">
+                <strong className="block text-xs">{item.name}</strong>
+                <small className="block text-[10px] leading-tight opacity-75">{item.detail}</small>
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const InterventionsBlock = () => (
+    <div className="border-t border-border bg-card p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="section-label">Intervenções</p>
+        <span className="text-[10px] font-bold text-primary">{active.length} ATIVAS</span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Aplique melhorias para transformar a rota.</p>
+      <div className="mt-3 space-y-2">
+        {interventions.map((item) => {
+          const Icon = item.icon;
+          const checked = active.includes(item.id);
+          return (
+            <div key={item.id} className="intervention-row">
+              <Icon className="size-4 shrink-0 text-primary" />
+              <label htmlFor={item.id} className="min-w-0 flex-1 cursor-pointer text-xs font-semibold text-foreground">{item.label}</label>
+              <Switch id={item.id} checked={checked} onCheckedChange={() => toggleIntervention(item.id)} aria-label={item.label} />
+            </div>
+          );
+        })}
+      </div>
+      <Button className="mt-4 h-12 w-full rounded-xl text-sm font-bold" onClick={() => setActive(interventions.map((item) => item.id))}>
+        <WandSparkles className="size-4" /> Calcular Rotas Inclusivas via IA
+      </Button>
+    </div>
+  );
+
+  const RouteFiltersBlock = () => (
+    <div className="grid grid-cols-2 gap-2" aria-label="Rotas visíveis">
+      <RouteFilter active={routeView === "inclusive"} onClick={() => setRouteView("inclusive")} color="bg-route-green" icon={<Sparkles className="size-3.5" />}>IA inclusiva</RouteFilter>
+      <RouteFilter active={routeView === "conventional"} onClick={() => setRouteView("conventional")} color="bg-route-red">Convencional</RouteFilter>
+      <RouteFilter active={routeView === "alternative"} onClick={() => setRouteView("alternative")} color="bg-route-yellow">Alternativa</RouteFilter>
+      <RouteFilter active={routeView === "all"} onClick={() => setRouteView("all")} color="bg-primary" icon={<Layers3 className="size-3.5" />}>Ver todas</RouteFilter>
+    </div>
+  );
+
+  const MapBlock = () => (
+    <div className="relative">
+      <div className={cn("map-shell relative overflow-hidden rounded-[18px] border border-border", phoneView ? "h-[340px]" : "min-h-[600px]")}>
+        <CampusMap profile={profile} active={active} position={current.position} routeView={routeView} />
+        <div className="absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] rounded-xl border border-border bg-card/95 p-3 shadow-panel backdrop-blur sm:left-5 sm:top-5">
+          <div className="flex items-center gap-2 text-xs font-bold text-foreground"><span className="status-dot" />Simulação ativa · {selectedName}</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const MetricsBlock = () => (
+    <div className={cn("grid gap-3", !phoneView && "xl:grid-cols-[1.15fr_.85fr]")}>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
+        <div className="grid grid-cols-3 gap-3">
+          <Metric label="Acessibilidade" value={`${score}%`} before={`${current.score}% antes`} accent />
+          <Metric label="Esforço físico" value={score >= 75 ? "Baixo" : current.effort} before={score >= 75 ? "Transitável" : "Requer atenção"} />
+          <Metric label="Tempo estimado" value={active.length ? `${Math.max(5, parseInt(current.time) - Math.min(3, active.length))} min` : current.time} before="Rota otimizada" />
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted" aria-label={`Score de acessibilidade: ${score}%`}>
+          <div className="h-full rounded-full bg-route-green transition-[width] duration-700" style={{ width: `${score}%` }} />
+        </div>
+      </div>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
+        <div className="flex items-center gap-2 text-xs font-bold text-foreground"><BrainCircuit className="size-4 text-primary" />Por que a IA recomendou esta rota?</div>
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground" aria-live="polite">“{explanation}”</p>
+      </div>
+    </div>
+  );
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className={dark ? "dark" : ""}>
@@ -95,92 +209,52 @@ function Dashboard() {
               <div className="flex min-w-0 items-center gap-3">
                 <img src={logoAsset.url} alt="Cubo colorido da Equipe PIXEL" className="size-11 shrink-0 object-contain" />
                 <div className="min-w-0">
-                  <h1 className="truncate font-display text-lg font-bold sm:text-xl">Cidade Invisível <span className="text-primary">| PIXEL</span></h1>
+                  <h1 className="truncate font-display text-lg font-bold text-foreground sm:text-xl">Cidade Invisível <span className="text-primary">| PIXEL</span></h1>
                   <p className="hidden text-xs text-muted-foreground md:block">IA para Identificação e Redução de Desigualdades na Mobilidade Urbana</p>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <div className={cn("items-center gap-2 xl:flex", phoneView ? "hidden" : "hidden")}>
-                  <span className="badge-brand">MVP Jump Start 2026</span><span className="badge-neutral">Missão 4 — Mobilidade</span><span className="badge-neutral">Protótipo Fase 1</span>
+                <div className={cn("hidden items-center gap-2", !phoneView && "xl:flex")}>
+                  <span className="badge-brand">MVP Jump Start 2026</span>
+                  <span className="badge-neutral">Missão 4 — Mobilidade</span>
+                  <span className="badge-neutral">Protótipo Fase 1</span>
                 </div>
                 <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={phoneView ? "Expandir para tela ampla" : "Visualizar no formato de celular"} title={phoneView ? "Tela ampla" : "Formato de celular"} onClick={() => setPhoneView((value) => !value)}>
-                  {phoneView ? <Monitor /> : <Smartphone />}
+                  {phoneView ? <Monitor className="size-5" /> : <Smartphone className="size-5" />}
                 </Button>
                 <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={dark ? "Ativar tema claro" : "Ativar tema escuro"} onClick={() => setDark((value) => !value)}>
-                  {dark ? <Sun /> : <Moon />}
+                  {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
                 </Button>
               </div>
             </header>
 
-            <div className={cn("grid", !phoneView && "lg:grid-cols-[360px_minmax(0,1fr)]")}>
-              <aside className={cn("border-b border-border bg-card", !phoneView && "lg:border-r lg:border-b-0")}>
-                <div className="border-b border-border p-4 sm:p-5">
-                  <p className="section-label">Trajeto microterritorial</p>
-                  <div className="mt-3 space-y-2">
-                    <label className="route-input"><span className="origin-dot" /><span><small>Origem</small>Portão Principal — Campus CEFET/RJ</span></label>
-                    <label className="route-input"><MapPin className="size-4 text-primary" /><span><small>Destino</small>Biblioteca Central / Bloco E</span></label>
+            {phoneView ? (
+              <div className="flex flex-col gap-3 p-3 sm:p-4">
+                <TripBlock />
+                <MapBlock />
+                <RouteFiltersBlock />
+                <ProfilesBlock />
+                <InterventionsBlock />
+                <MetricsBlock />
+              </div>
+            ) : (
+              <div className="grid lg:grid-cols-[360px_minmax(0,1fr)]">
+                <aside className="border-b border-border bg-card lg:border-r lg:border-b-0">
+                  <TripBlock />
+                  <ProfilesBlock />
+                  <InterventionsBlock />
+                </aside>
+                <section className="min-w-0 bg-map-surface p-3 sm:p-5">
+                  <div className="mb-3">
+                    <RouteFiltersBlock />
                   </div>
-                </div>
-
-                <div className="p-4 sm:p-5">
-                  <p className="section-label">Perfil de mobilidade</p>
-                  <div className={cn("mt-3 grid gap-2", phoneView ? "grid-cols-1" : "grid-cols-2")}>
-                    {profiles.map((item) => {
-                      const Icon = item.icon;
-                      const selected = item.id === profile;
-                      return <Button key={item.id} variant={selected ? "profileActive" : "profile"} className="h-auto min-h-20 whitespace-normal p-3" onClick={() => { setProfile(item.id); setActive([]); }} aria-pressed={selected}>
-                        <Icon className="size-5" /><span className="text-left"><strong className="block text-xs">{item.name}</strong><small className="block text-[10px] leading-tight opacity-75">{item.detail}</small></span>
-                      </Button>;
-                    })}
+                  <MapBlock />
+                  <div className="mt-3">
+                    <MetricsBlock />
                   </div>
-                </div>
-
-                <div className="border-t border-border p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-2"><p className="section-label">Intervenções</p><span className="text-[10px] font-bold text-primary">{active.length} ATIVAS</span></div>
-                  <p className="mt-1 text-xs text-muted-foreground">Aplique melhorias para transformar a rota.</p>
-                  <div className="mt-3 space-y-2">
-                    {interventions.map((item) => {
-                      const Icon = item.icon;
-                      const checked = active.includes(item.id);
-                      return <div key={item.id} className="intervention-row">
-                        <Icon className="size-4 shrink-0 text-primary" /><label htmlFor={item.id} className="min-w-0 flex-1 cursor-pointer text-xs font-semibold">{item.label}</label>
-                        <Switch id={item.id} checked={checked} onCheckedChange={() => toggleIntervention(item.id)} aria-label={item.label} />
-                      </div>;
-                    })}
-                  </div>
-                  <Button className="mt-4 h-12 w-full rounded-xl text-sm font-bold" onClick={() => setActive(interventions.map((item) => item.id))}><WandSparkles />Calcular Rotas Inclusivas via IA</Button>
-                </div>
-              </aside>
-
-              <section className="min-w-0 bg-map-surface p-3 sm:p-5">
-                <div className="mb-3 grid grid-cols-2 gap-2" aria-label="Rotas visíveis">
-                  <RouteFilter active={routeView === "inclusive"} onClick={() => setRouteView("inclusive")} color="bg-route-green" icon={<Sparkles />}>IA inclusiva</RouteFilter>
-                  <RouteFilter active={routeView === "conventional"} onClick={() => setRouteView("conventional")} color="bg-route-red">Convencional</RouteFilter>
-                  <RouteFilter active={routeView === "alternative"} onClick={() => setRouteView("alternative")} color="bg-route-yellow">Alternativa</RouteFilter>
-                  <RouteFilter active={routeView === "all"} onClick={() => setRouteView("all")} color="bg-primary" icon={<Layers3 />}>Ver todas</RouteFilter>
-                </div>
-                <div className={cn("map-shell relative overflow-hidden rounded-[18px] border border-border", phoneView ? "h-[430px]" : "min-h-[600px]")}>
-                  <CampusMap profile={profile} active={active} position={current.position} routeView={routeView} />
-                  <div className="absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] rounded-xl border border-border bg-card/95 p-3 shadow-panel backdrop-blur sm:left-5 sm:top-5">
-                    <div className="flex items-center gap-2 text-xs font-bold"><span className="status-dot" />Simulação ativa · {selectedName}</div>
-                  </div>
-                </div>
-                <div className={cn("mt-3 grid gap-3", !phoneView && "xl:grid-cols-[1.15fr_.85fr]")}>
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
-                      <div className="grid grid-cols-3 gap-3">
-                        <Metric label="Acessibilidade" value={`${score}%`} before={`${current.score}% antes`} accent />
-                        <Metric label="Esforço físico" value={score >= 75 ? "Baixo" : current.effort} before={score >= 75 ? "Transitável" : "Requer atenção"} />
-                        <Metric label="Tempo estimado" value={active.length ? `${Math.max(5, parseInt(current.time) - Math.min(3, active.length))} min` : current.time} before="Rota otimizada" />
-                      </div>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted" aria-label={`Score de acessibilidade: ${score}%`}><div className="h-full rounded-full bg-route-green transition-[width] duration-700" style={{ width: `${score}%` }} /></div>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
-                      <div className="flex items-center gap-2 text-xs font-bold"><BrainCircuit className="size-4 text-primary" />Por que a IA recomendou esta rota?</div>
-                      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground" aria-live="polite">“{explanation}”</p>
-                    </div>
-                </div>
-              </section>
-            </div>
+                </section>
+              </div>
+            )}
           </div>
         </main>
       </div>
@@ -189,13 +263,22 @@ function Dashboard() {
 }
 
 function Metric({ label, value, before, accent = false }: { label: string; value: string; before: string; accent?: boolean }) {
-  return <div className="min-w-0"><p className="truncate text-[9px] font-bold uppercase text-muted-foreground">{label}</p><p className={`mt-1 truncate font-display text-lg font-bold sm:text-xl ${accent ? "text-route-green" : ""}`}>{value}</p><p className="truncate text-[9px] text-muted-foreground">{before}</p></div>;
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-[9px] font-bold uppercase text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 truncate font-display text-lg font-bold sm:text-xl", accent && "text-route-green")}>{value}</p>
+      <p className="truncate text-[9px] text-muted-foreground">{before}</p>
+    </div>
+  );
 }
 
 function RouteFilter({ active, onClick, color, icon, children }: { active: boolean; onClick: () => void; color: string; icon?: React.ReactNode; children: React.ReactNode }) {
-  return <Button variant={active ? "secondary" : "outline"} className={cn("h-11 justify-start px-3 text-xs", active && "ring-2 ring-primary/35")} onClick={onClick} aria-pressed={active}>
-    {icon ?? <span className={cn("size-2.5 shrink-0 rounded-full", color)} />}{children}
-  </Button>;
+  return (
+    <Button variant={active ? "secondary" : "outline"} className={cn("h-11 justify-start px-3 text-xs", active && "ring-2 ring-primary/35")} onClick={onClick} aria-pressed={active}>
+      {icon ?? <span className={cn("size-2.5 shrink-0 rounded-full", color)} />}
+      {children}
+    </Button>
+  );
 }
 
 function CampusMap({ profile, active, position, routeView }: { profile: Profile; active: string[]; position: string; routeView: RouteView }) {
@@ -205,24 +288,41 @@ function CampusMap({ profile, active, position, routeView }: { profile: Profile;
     { id: "calcada", x: "59%", y: "47%", label: "Calçada esburacada" },
     { id: "luz", x: "70%", y: "31%", label: "Iluminação insuficiente" },
   ];
-  return <div className="absolute inset-0">
-    <svg className="size-full" viewBox="0 0 1000 720" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Mapa estilizado do Campus CEFET/RJ com três opções de rota">
-      <rect width="1000" height="720" className="fill-map" />
-      <g className="fill-building stroke-building" strokeWidth="2">
-        <path d="M70 90h210v115H70z" /><path d="M350 65h170v150H350z" /><path d="M665 70h245v125H665z" />
-        <path d="M90 330h175v130H90z" /><path d="M380 365h180v120H380z" /><path d="M705 345h210v135H705z" />
-      </g>
-      <g className="stroke-road" strokeWidth="42" fill="none" strokeLinecap="round"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
-      <g className="stroke-road-line" strokeWidth="2" fill="none" strokeDasharray="9 12"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
-      <g className="fill-greenery"><circle cx="160" cy="555" r="62"/><circle cx="790" cy="590" r="72"/><circle cx="510" cy="580" r="34"/></g>
-       {(routeView === "conventional" || routeView === "all") && <path d="M95 620 C180 570 235 455 310 390 S420 245 545 280 S720 260 865 150" className="stroke-route-red route-line" />}
-       {(routeView === "alternative" || routeView === "all") && <path d="M95 620 C160 660 350 650 470 590 S740 550 865 150" className="stroke-route-yellow route-line" />}
-       {(routeView === "inclusive" || routeView === "all") && <path d="M95 620 C225 555 260 520 315 430 S470 360 555 350 S715 285 865 150" className="stroke-route-green route-line route-recommended" />}
-      <circle cx="95" cy="620" r="12" className="fill-primary stroke-card" strokeWidth="6"/><circle cx="865" cy="150" r="12" className="fill-destructive stroke-card" strokeWidth="6"/>
-      <text x="82" y="657" className="map-label">PORTÃO PRINCIPAL</text><text x="805" y="119" className="map-label">BIBLIOTECA · BLOCO E</text>
-    </svg>
-    {barriers.map((item) => !active.includes(item.id) && <Tooltip key={item.id}><TooltipTrigger asChild><button type="button" className="barrier-marker" style={{ left: item.x, top: item.y }} aria-label={item.label}>!</button></TooltipTrigger><TooltipContent>{item.label}</TooltipContent></Tooltip>)}
-    <div className="agent-marker" style={{ left: x, top: y }} aria-label={`Agente sintético: ${profile}`}><Accessibility className="size-5" /><span>{profile === "ana" ? "ANA" : profile.toUpperCase()}</span></div>
-    {active.length > 0 && <div className="improvement-note"><Sparkles className="size-4" />{active.length} melhoria{active.length > 1 ? "s" : ""} simulada{active.length > 1 ? "s" : ""}</div>}
-  </div>;
+  return (
+    <div className="absolute inset-0">
+      <svg className="size-full" viewBox="0 0 1000 720" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Mapa estilizado do Campus CEFET/RJ com três opções de rota">
+        <rect width="1000" height="720" className="fill-map" />
+        <g className="fill-building stroke-building" strokeWidth="2">
+          <path d="M70 90h210v115H70z" /><path d="M350 65h170v150H350z" /><path d="M665 70h245v125H665z" />
+          <path d="M90 330h175v130H90z" /><path d="M380 365h180v120H380z" /><path d="M705 345h210v135H705z" />
+        </g>
+        <g className="stroke-road" strokeWidth="42" fill="none" strokeLinecap="round"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
+        <g className="stroke-road-line" strokeWidth="2" fill="none" strokeDasharray="9 12"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
+        <g className="fill-greenery"><circle cx="160" cy="555" r="62"/><circle cx="790" cy="590" r="72"/><circle cx="510" cy="580" r="34"/></g>
+        {(routeView === "conventional" || routeView === "all") && <path d="M95 620 C180 570 235 455 310 390 S420 245 545 280 S720 260 865 150" className="stroke-route-red route-line" />}
+        {(routeView === "alternative" || routeView === "all") && <path d="M95 620 C160 660 350 650 470 590 S740 550 865 150" className="stroke-route-yellow route-line" />}
+        {(routeView === "inclusive" || routeView === "all") && <path d="M95 620 C225 555 260 520 315 430 S470 360 555 350 S715 285 865 150" className="stroke-route-green route-line route-recommended" />}
+        <circle cx="95" cy="620" r="12" className="fill-primary stroke-card" strokeWidth="6"/><circle cx="865" cy="150" r="12" className="fill-destructive stroke-card" strokeWidth="6"/>
+        <text x="82" y="657" className="map-label">PORTÃO PRINCIPAL</text><text x="805" y="119" className="map-label">BIBLIOTECA · BLOCO E</text>
+      </svg>
+      {barriers.map((item) => !active.includes(item.id) && (
+        <Tooltip key={item.id}>
+          <TooltipTrigger asChild>
+            <button type="button" className="barrier-marker" style={{ left: item.x, top: item.y }} aria-label={item.label}>!</button>
+          </TooltipTrigger>
+          <TooltipContent><p className="text-xs">{item.label}</p></TooltipContent>
+        </Tooltip>
+      ))}
+      <div className="agent-marker" style={{ left: x, top: y }} aria-label={`Agente sintético: ${profile}`}>
+        <Accessibility className="size-5" />
+        <span>{profile === "ana" ? "ANA" : profile.toUpperCase()}</span>
+      </div>
+      {active.length > 0 && (
+        <div className="improvement-note">
+          <Sparkles className="size-4" />
+          {active.length} melhoria{active.length > 1 ? "s" : ""} simulada{active.length > 1 ? "s" : ""}
+        </div>
+      )}
+    </div>
+  );
 }
