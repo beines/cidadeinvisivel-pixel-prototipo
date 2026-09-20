@@ -9,11 +9,14 @@ import {
   Eye,
   Footprints,
   Lightbulb,
+  Layers3,
   MapPin,
+  Monitor,
   Moon,
   Navigation,
   RouteIcon,
   Sparkles,
+  Smartphone,
   Sun,
   UserRound,
   WandSparkles,
@@ -23,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import logoAsset from "@/assets/logo-pixel.png.asset.json";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,6 +43,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Profile = "ana" | "roberto" | "maria" | "carlos";
+type RouteView = "inclusive" | "conventional" | "alternative" | "all";
 
 const profiles = [
   { id: "ana" as const, name: "Ana", detail: "38 anos · Cadeira de rodas", icon: Accessibility },
@@ -66,6 +71,8 @@ function Dashboard() {
   const [profile, setProfile] = useState<Profile>("ana");
   const [active, setActive] = useState<string[]>([]);
   const [dark, setDark] = useState(false);
+  const [phoneView, setPhoneView] = useState(true);
+  const [routeView, setRouteView] = useState<RouteView>("inclusive");
   const current = profileCopy[profile];
   const score = Math.min(95, current.score + interventions.filter((item) => active.includes(item.id)).reduce((sum, item) => sum + item.gain, 0));
   const selectedName = profiles.find((item) => item.id === profile)?.name ?? "Ana";
@@ -83,7 +90,7 @@ function Dashboard() {
     <TooltipProvider delayDuration={150}>
       <div className={dark ? "dark" : ""}>
         <main className="min-h-dvh bg-background p-3 text-foreground transition-colors sm:p-5 lg:p-6">
-          <div className="mx-auto max-w-[1540px] overflow-hidden rounded-[24px] border border-border bg-card shadow-dashboard">
+          <div className={cn("mx-auto overflow-hidden border border-border bg-card shadow-dashboard transition-[max-width] duration-500", phoneView ? "max-w-[430px] rounded-[28px]" : "max-w-[1540px] rounded-[24px]")}>
             <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border px-4 py-3 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <img src={logoAsset.url} alt="Cubo colorido da Equipe PIXEL" className="size-11 shrink-0 object-contain" />
@@ -93,17 +100,20 @@ function Dashboard() {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <div className="hidden items-center gap-2 xl:flex">
+                <div className={cn("items-center gap-2 xl:flex", phoneView ? "hidden" : "hidden")}>
                   <span className="badge-brand">MVP Jump Start 2026</span><span className="badge-neutral">Missão 4 — Mobilidade</span><span className="badge-neutral">Protótipo Fase 1</span>
                 </div>
+                <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={phoneView ? "Expandir para tela ampla" : "Visualizar no formato de celular"} title={phoneView ? "Tela ampla" : "Formato de celular"} onClick={() => setPhoneView((value) => !value)}>
+                  {phoneView ? <Monitor /> : <Smartphone />}
+                </Button>
                 <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={dark ? "Ativar tema claro" : "Ativar tema escuro"} onClick={() => setDark((value) => !value)}>
                   {dark ? <Sun /> : <Moon />}
                 </Button>
               </div>
             </header>
 
-            <div className="grid lg:grid-cols-[360px_minmax(0,1fr)]">
-              <aside className="border-b border-border bg-card lg:border-r lg:border-b-0">
+            <div className={cn("grid", !phoneView && "lg:grid-cols-[360px_minmax(0,1fr)]")}>
+              <aside className={cn("border-b border-border bg-card", !phoneView && "lg:border-r lg:border-b-0")}>
                 <div className="border-b border-border p-4 sm:p-5">
                   <p className="section-label">Trajeto microterritorial</p>
                   <div className="mt-3 space-y-2">
@@ -114,7 +124,7 @@ function Dashboard() {
 
                 <div className="p-4 sm:p-5">
                   <p className="section-label">Perfil de mobilidade</p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className={cn("mt-3 grid gap-2", phoneView ? "grid-cols-1" : "grid-cols-2")}>
                     {profiles.map((item) => {
                       const Icon = item.icon;
                       const selected = item.id === profile;
@@ -143,19 +153,20 @@ function Dashboard() {
               </aside>
 
               <section className="min-w-0 bg-map-surface p-3 sm:p-5">
-                <div className="map-shell relative min-h-[540px] overflow-hidden rounded-[18px] border border-border lg:min-h-[600px]">
-                  <CampusMap profile={profile} active={active} position={current.position} />
+                <div className="mb-3 grid grid-cols-2 gap-2" aria-label="Rotas visíveis">
+                  <RouteFilter active={routeView === "inclusive"} onClick={() => setRouteView("inclusive")} color="bg-route-green" icon={<Sparkles />}>IA inclusiva</RouteFilter>
+                  <RouteFilter active={routeView === "conventional"} onClick={() => setRouteView("conventional")} color="bg-route-red">Convencional</RouteFilter>
+                  <RouteFilter active={routeView === "alternative"} onClick={() => setRouteView("alternative")} color="bg-route-yellow">Alternativa</RouteFilter>
+                  <RouteFilter active={routeView === "all"} onClick={() => setRouteView("all")} color="bg-primary" icon={<Layers3 />}>Ver todas</RouteFilter>
+                </div>
+                <div className={cn("map-shell relative overflow-hidden rounded-[18px] border border-border", phoneView ? "h-[430px]" : "min-h-[600px]")}>
+                  <CampusMap profile={profile} active={active} position={current.position} routeView={routeView} />
                   <div className="absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] rounded-xl border border-border bg-card/95 p-3 shadow-panel backdrop-blur sm:left-5 sm:top-5">
                     <div className="flex items-center gap-2 text-xs font-bold"><span className="status-dot" />Simulação ativa · {selectedName}</div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold">
-                      <span className="legend"><i className="bg-route-red" />Convencional · 3 barreiras</span>
-                      <span className="legend"><i className="bg-route-yellow" />Alternativa · +800 m</span>
-                      <span className="legend text-route-green"><i className="bg-route-green" />IA otimizada</span>
-                    </div>
                   </div>
-
-                  <div className="absolute inset-x-3 bottom-3 z-10 grid gap-3 sm:inset-x-5 sm:bottom-5 xl:grid-cols-[1.15fr_.85fr]">
-                    <div className="rounded-2xl border border-border bg-card/96 p-4 shadow-panel backdrop-blur">
+                </div>
+                <div className={cn("mt-3 grid gap-3", !phoneView && "xl:grid-cols-[1.15fr_.85fr]")}>
+                    <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
                       <div className="grid grid-cols-3 gap-3">
                         <Metric label="Acessibilidade" value={`${score}%`} before={`${current.score}% antes`} accent />
                         <Metric label="Esforço físico" value={score >= 75 ? "Baixo" : current.effort} before={score >= 75 ? "Transitável" : "Requer atenção"} />
@@ -163,11 +174,10 @@ function Dashboard() {
                       </div>
                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted" aria-label={`Score de acessibilidade: ${score}%`}><div className="h-full rounded-full bg-route-green transition-[width] duration-700" style={{ width: `${score}%` }} /></div>
                     </div>
-                    <div className="rounded-2xl border border-border bg-card/96 p-4 shadow-panel backdrop-blur">
+                    <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
                       <div className="flex items-center gap-2 text-xs font-bold"><BrainCircuit className="size-4 text-primary" />Por que a IA recomendou esta rota?</div>
                       <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground" aria-live="polite">“{explanation}”</p>
                     </div>
-                  </div>
                 </div>
               </section>
             </div>
@@ -182,7 +192,13 @@ function Metric({ label, value, before, accent = false }: { label: string; value
   return <div className="min-w-0"><p className="truncate text-[9px] font-bold uppercase text-muted-foreground">{label}</p><p className={`mt-1 truncate font-display text-lg font-bold sm:text-xl ${accent ? "text-route-green" : ""}`}>{value}</p><p className="truncate text-[9px] text-muted-foreground">{before}</p></div>;
 }
 
-function CampusMap({ profile, active, position }: { profile: Profile; active: string[]; position: string }) {
+function RouteFilter({ active, onClick, color, icon, children }: { active: boolean; onClick: () => void; color: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  return <Button variant={active ? "secondary" : "outline"} className={cn("h-11 justify-start px-3 text-xs", active && "ring-2 ring-primary/35")} onClick={onClick} aria-pressed={active}>
+    {icon ?? <span className={cn("size-2.5 shrink-0 rounded-full", color)} />}{children}
+  </Button>;
+}
+
+function CampusMap({ profile, active, position, routeView }: { profile: Profile; active: string[]; position: string; routeView: RouteView }) {
   const [x, y] = position.split(",");
   const barriers = [
     { id: "rampa", x: "46%", y: "30%", label: "Guia não rebaixada · 18 cm" },
@@ -199,9 +215,9 @@ function CampusMap({ profile, active, position }: { profile: Profile; active: st
       <g className="stroke-road" strokeWidth="42" fill="none" strokeLinecap="round"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
       <g className="stroke-road-line" strokeWidth="2" fill="none" strokeDasharray="9 12"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
       <g className="fill-greenery"><circle cx="160" cy="555" r="62"/><circle cx="790" cy="590" r="72"/><circle cx="510" cy="580" r="34"/></g>
-      <path d="M95 620 C180 570 235 455 310 390 S420 245 545 280 S720 260 865 150" className="stroke-route-red route-line" />
-      <path d="M95 620 C160 660 350 650 470 590 S740 550 865 150" className="stroke-route-yellow route-line" />
-      <path d="M95 620 C225 555 260 520 315 430 S470 360 555 350 S715 285 865 150" className="stroke-route-green route-line route-recommended" />
+       {(routeView === "conventional" || routeView === "all") && <path d="M95 620 C180 570 235 455 310 390 S420 245 545 280 S720 260 865 150" className="stroke-route-red route-line" />}
+       {(routeView === "alternative" || routeView === "all") && <path d="M95 620 C160 660 350 650 470 590 S740 550 865 150" className="stroke-route-yellow route-line" />}
+       {(routeView === "inclusive" || routeView === "all") && <path d="M95 620 C225 555 260 520 315 430 S470 360 555 350 S715 285 865 150" className="stroke-route-green route-line route-recommended" />}
       <circle cx="95" cy="620" r="12" className="fill-primary stroke-card" strokeWidth="6"/><circle cx="865" cy="150" r="12" className="fill-destructive stroke-card" strokeWidth="6"/>
       <text x="82" y="657" className="map-label">PORTÃO PRINCIPAL</text><text x="805" y="119" className="map-label">BIBLIOTECA · BLOCO E</text>
     </svg>
