@@ -4,141 +4,60 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
-
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px); --radius-md: calc(var(--radius) - 2px); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive); --color-destructive-foreground: var(--destructive-foreground); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
+  --color-map-surface: var(--map-surface); --color-map: var(--map); --color-building: var(--building); --color-road: var(--road); --color-road-line: var(--road-line); --color-greenery: var(--greenery);
+  --color-route-red: var(--route-red); --color-route-yellow: var(--route-yellow); --color-route-green: var(--route-green);
+  --font-display: "Sora", sans-serif; --font-sans: "Manrope", sans-serif;
+  --shadow-dashboard: var(--shadow-dashboard); --shadow-panel: var(--shadow-panel);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --radius: .75rem;
+  --background: oklch(.965 .008 175); --foreground: oklch(.285 .062 230); --card: oklch(1 0 0); --card-foreground: oklch(.285 .062 230);
+  --primary: oklch(.47 .105 202); --primary-foreground: oklch(.99 0 0); --secondary: oklch(.93 .025 204); --secondary-foreground: oklch(.285 .062 230);
+  --muted: oklch(.945 .012 210); --muted-foreground: oklch(.47 .03 225); --accent: oklch(.94 .035 193); --accent-foreground: oklch(.35 .08 205);
+  --destructive: oklch(.49 .19 27); --destructive-foreground: oklch(.99 0 0); --border: oklch(.87 .018 210); --input: oklch(.87 .018 210); --ring: oklch(.47 .105 202);
+  --map-surface: oklch(.95 .012 205); --map: oklch(.96 .012 205); --building: oklch(.91 .018 214); --road: oklch(.995 0 0); --road-line: oklch(.78 .025 215); --greenery: oklch(.87 .055 150);
+  --route-red: oklch(.49 .19 27); --route-yellow: oklch(.79 .16 80); --route-green: oklch(.55 .13 155);
+  --shadow-dashboard: 0 20px 55px color-mix(in oklab, var(--foreground) 12%, transparent); --shadow-panel: 0 10px 30px color-mix(in oklab, var(--foreground) 12%, transparent);
 }
-
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: oklch(.2 .035 230); --foreground: oklch(.95 .01 205); --card: oklch(.25 .035 228); --card-foreground: oklch(.95 .01 205);
+  --primary: oklch(.7 .12 190); --primary-foreground: oklch(.18 .04 230); --secondary: oklch(.3 .04 225); --secondary-foreground: oklch(.95 .01 205);
+  --muted: oklch(.3 .03 225); --muted-foreground: oklch(.75 .025 210); --accent: oklch(.32 .055 205); --accent-foreground: oklch(.94 .02 195);
+  --destructive: oklch(.66 .18 28); --destructive-foreground: oklch(.99 0 0); --border: oklch(.4 .03 225); --input: oklch(.4 .03 225); --ring: oklch(.7 .12 190);
+  --map-surface: oklch(.22 .03 225); --map: oklch(.26 .025 225); --building: oklch(.32 .025 220); --road: oklch(.37 .025 220); --road-line: oklch(.5 .025 215); --greenery: oklch(.32 .055 155);
+  --route-red: oklch(.67 .2 27); --route-yellow: oklch(.82 .16 80); --route-green: oklch(.7 .15 155);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-  }
+  * { border-color: var(--color-border); letter-spacing: 0; }
+  html { font-family: var(--font-sans); }
+  body { margin: 0; background: var(--color-background); color: var(--color-foreground); }
+  button, input { font: inherit; }
 }
+
+@utility section-label { font-size: .66rem; line-height: 1rem; font-weight: 800; text-transform: uppercase; color: var(--color-muted-foreground); }
+@utility badge-brand { border-radius: .45rem; background: var(--color-accent); color: var(--color-accent-foreground); padding: .3rem .55rem; font-size: .62rem; font-weight: 800; }
+@utility badge-neutral { border-radius: .45rem; border: 1px solid var(--color-border); background: var(--color-muted); color: var(--color-muted-foreground); padding: .3rem .55rem; font-size: .62rem; font-weight: 800; }
+@utility route-input { display: flex; min-height: 3.6rem; align-items: center; gap: .75rem; border-radius: .8rem; border: 1px solid var(--color-border); background: var(--color-muted); padding: .65rem .8rem; font-size: .72rem; font-weight: 700; }
+@utility origin-dot { display: block; width: .72rem; height: .72rem; flex-shrink: 0; border-radius: 999px; border: 3px solid var(--color-primary); }
+@utility intervention-row { display: flex; min-height: 2.75rem; align-items: center; gap: .65rem; border-radius: .7rem; border: 1px solid var(--color-border); padding: .55rem .7rem; transition: border-color .2s ease, background-color .2s ease; }
+@utility status-dot { width: .5rem; height: .5rem; border-radius: 999px; background: var(--color-route-green); box-shadow: 0 0 0 5px color-mix(in oklab, var(--route-green) 18%, transparent); }
+@utility legend { display: inline-flex; align-items: center; gap: .35rem; }
+@utility map-shell { background-color: var(--color-map); background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 28px 28px; }
+@utility route-line { fill: none; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; opacity: .75; }
+@utility route-recommended { stroke-width: 12; opacity: .95; filter: drop-shadow(0 3px 5px color-mix(in oklab, var(--route-green) 30%, transparent)); }
+@utility map-label { fill: var(--color-foreground); font-family: var(--font-display); font-size: 13px; font-weight: 700; }
+@utility barrier-marker { position: absolute; z-index: 4; display: grid; width: 2rem; height: 2rem; transform: translate(-50%,-50%); place-items: center; border: 3px solid var(--color-card); border-radius: 999px; background: var(--color-destructive); color: var(--color-destructive-foreground); font-weight: 900; box-shadow: var(--shadow-panel); cursor: help; }
+@utility agent-marker { position: absolute; z-index: 5; display: flex; transform: translate(-50%,-50%); align-items: center; gap: .35rem; border: 3px solid var(--color-card); border-radius: .75rem; background: var(--color-primary); color: var(--color-primary-foreground); padding: .45rem .6rem; box-shadow: var(--shadow-panel); font-size: .65rem; font-weight: 900; transition: left .5s ease, top .5s ease; }
+@utility improvement-note { position: absolute; right: 1rem; top: 5rem; display: flex; align-items: center; gap: .4rem; border-radius: .65rem; background: var(--color-route-green); color: var(--color-primary-foreground); padding: .55rem .7rem; font-size: .68rem; font-weight: 800; box-shadow: var(--shadow-panel); }
+
+small { display:block; margin-bottom: .08rem; font-size: .57rem; font-weight: 800; text-transform: uppercase; color: var(--color-muted-foreground); }
+.fill-map { fill: var(--color-map); }.fill-building { fill: var(--color-building); }.stroke-building { stroke: var(--color-border); }.stroke-road { stroke: var(--color-road); }.stroke-road-line { stroke: var(--color-road-line); }.fill-greenery { fill: var(--color-greenery); }.stroke-card { stroke: var(--color-card); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
