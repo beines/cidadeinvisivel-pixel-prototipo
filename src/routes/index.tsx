@@ -83,7 +83,7 @@ function Dashboard() {
     <TooltipProvider delayDuration={150}>
       <div className={dark ? "dark" : ""}>
         <main className="min-h-dvh bg-background p-3 text-foreground transition-colors sm:p-5 lg:p-6">
-          <div className="mx-auto max-w-[1540px] overflow-hidden rounded-[24px] border border-border bg-card shadow-dashboard lg:min-h-[calc(100dvh-3rem)]">
+          <div className="mx-auto max-w-[1540px] overflow-hidden rounded-[24px] border border-border bg-card shadow-dashboard">
             <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border px-4 py-3 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <img src={logoAsset.url} alt="Cubo colorido da Equipe PIXEL" className="size-11 shrink-0 object-contain" />
