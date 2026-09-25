@@ -1,1 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="#051d3c"/><path d="M64 12 111 39v50l-47 27L17 89V39Z" fill="#16a6a0"/><path d="M64 12v53L17 39M64 65l47-26M64 65v51" fill="none" stroke="#fff" stroke-width="7"/><path d="M17 89 64 65l47 24" fill="none" stroke="#fac650" stroke-width="7"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Logo do Cidade Invisível PIXEL">
+  <rect width="256" height="256" fill="#000000"/>
+
+  <g transform="translate(26 18)">
+    <!-- face de cima -->
+    <g transform="translate(28 10)">
+      <rect x="0" y="0" width="86" height="86" fill="#000000" stroke="#000000" stroke-width="2"/>
+      <g fill="#2aa546" stroke="#000000" stroke-width="2">
+        <rect x="0" y="0" width="28" height="28"/>
+        <rect x="28" y="0" width="28" height="28"/>
+        <rect x="56" y="0" width="28" height="28"/>
+        <rect x="0" y="28" width="28" height="28"/>
+        <rect x="28" y="28" width="28" height="28" fill="#f3d100"/>
+        <rect x="56" y="28" width="28" height="28"/>
+        <rect x="0" y="56" width="28" height="28"/>
+        <rect x="28" y="56" width="28" height="28"/>
+        <rect x="56" y="56" width="28" height="28"/>
+      </g>
+    </g>
+
+    <!-- face da direita -->
+    <g transform="translate(92 40)">
+      <rect x="0" y="0" width="86" height="86" fill="#000000" stroke="#000000" stroke-width="2"/>
+      <g fill="#d32f2f" stroke="#000000" stroke-width="2">
+        <rect x="0" y="0" width="28" height="28"/>
+        <rect x="28" y="0" width="28" height="28" fill="#2aa546"/>
+        <rect x="56" y="0" width="28" height="28"/>
+        <rect x="0" y="28" width="28" height="28" fill="#f3d100"/>
+        <rect x="28" y="28" width="28" height="28" fill="#2aa546"/>
+        <rect x="56" y="28" width="28" height="28" fill="#f3d100"/>
+        <rect x="0" y="56" width="28" height="28"/>
+        <rect x="28" y="56" width="28" height="28" fill="#2aa546"/>
+        <rect x="56" y="56" width="28" height="28" fill="#f3d100"/>
+      </g>
+    </g>
+
+    <!-- face da frente -->
+    <g transform="translate(38 84)">
+      <rect x="0" y="0" width="86" height="86" fill="#000000" stroke="#000000" stroke-width="2"/>
+      <g fill="#2aa546" stroke="#000000" stroke-width="2">
+        <rect x="0" y="0" width="28" height="28"/>
+        <rect x="28" y="0" width="28" height="28" fill="#f3d100"/>
+        <rect x="56" y="0" width="28" height="28" fill="#d32f2f"/>
+        <rect x="0" y="28" width="28" height="28" fill="#f3d100"/>
+        <rect x="28" y="28" width="28" height="28" fill="#d32f2f"/>
+        <rect x="56" y="28" width="28" height="28" fill="#2aa546"/>
+        <rect x="0" y="56" width="28" height="28" fill="#d32f2f"/>
+        <rect x="28" y="56" width="28" height="28" fill="#2aa546"/>
+        <rect x="56" y="56" width="28" height="28" fill="#f3d100"/>
+      </g>
+    </g>
+  </g>
+</svg>
