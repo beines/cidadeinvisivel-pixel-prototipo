@@ -1,29 +1,23 @@
-# Welcome to your Lovable project
+# Cidade Invisível | PIXEL
 
-This project was built with [Lovable](https://lovable.dev).
+Protótipo de roteamento inclusivo para quatro perfis de mobilidade. O motor em `src/lib/campus.ts` usa um grafo e Dijkstra com pesos por tipo de barreira; a interface compara três trajetos e permite simular cinco intervenções. O mapa, as distâncias, as barreiras e os custos são **sintéticos**. Não use os resultados para se orientar no campus ou definir obras.
 
-## Build with Lovable
+A Biblioteca Central do campus Maracanã fica no bloco E, 4º andar, conforme [o CEFET/RJ](https://www.cefet-rj.br/biblioteca-campus-maracana). O mapa externo OpenStreetMap mostra o entorno real, mas não recebe as rotas sintéticas como se fossem dados georreferenciados.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Executar
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
 
-## Built with
+## Verificar
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+```sh
+npm run build
+npx tsc --noEmit
+npm test
+npm run lint
+```
+
+O [checklist](CHECKLIST.md) mostra cada requisito, o que foi implementado e os dados que ainda faltam para o piloto real. A logo original hospedada no Lovable estava indisponível; o SVG local é um substituto.
