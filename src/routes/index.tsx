@@ -1,328 +1,789 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Accessibility,
   Baby,
-  BrainCircuit,
-  BrickWall,
-  Check,
   Eye,
-  Footprints,
-  Lightbulb,
-  Layers3,
-  MapPin,
-  Monitor,
-  Moon,
-  Navigation,
-  RouteIcon,
-  Sparkles,
-  Smartphone,
-  Sun,
   UserRound,
-  WandSparkles,
-  Zap,
+  Moon,
+  Sun,
+  MapPin,
+  Download,
+  Share2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import logoAsset from "@/assets/logo-pixel.png.asset.json";
-import { cn } from "@/lib/utils";
+import {
+  calculate,
+  edges,
+  explain,
+  nodes,
+  places,
+  profiles,
+  weights,
+  works,
+  type Profile,
+  type RouteId,
+  type NodeId,
+  type Work,
+} from "@/lib/campus";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Cidade Invisível | PIXEL" },
-      { name: "description", content: "Roteador inclusivo e simulador de acessibilidade urbana da Equipe PIXEL." },
-      { property: "og:title", content: "Cidade Invisível | PIXEL" },
-      { property: "og:description", content: "IA para identificação e redução de desigualdades na mobilidade urbana." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "description", content: "Simulador de rotas acessíveis do PIXEL" },
+      { property: "og:image", content: "/share.svg" },
     ],
   }),
   component: Dashboard,
 });
-
-type Profile = "ana" | "roberto" | "maria" | "carlos";
-type RouteView = "inclusive" | "conventional" | "alternative" | "all";
-
-const profiles = [
-  { id: "ana" as const, name: "Ana", detail: "38 anos · Cadeira de rodas", icon: Accessibility },
-  { id: "roberto" as const, name: "Roberto", detail: "Deficiência visual", icon: Eye },
-  { id: "maria" as const, name: "Dona Maria", detail: "Mobilidade reduzida", icon: UserRound },
-  { id: "carlos" as const, name: "Carlos", detail: "Carrinho de bebê", icon: Baby },
-];
-
-const interventions = [
-  { id: "rampa", label: "Instalar rampa", icon: Accessibility, gain: 16 },
-  { id: "calcada", label: "Nivelar calçada", icon: BrickWall, gain: 14 },
-  { id: "luz", label: "Adicionar iluminação", icon: Lightbulb, gain: 10 },
-  { id: "tatil", label: "Implantar piso tátil", icon: Footprints, gain: 12 },
-  { id: "travessia", label: "Travessia elevada", icon: Navigation, gain: 8 },
-];
-
-const profileCopy: Record<Profile, { score: number; time: string; effort: string; reason: string; position: string }> = {
-  ana: { score: 35, time: "8 min", effort: "Alto / crítico", position: "32%,67%", reason: "A IA descartou o trecho 2 por uma guia não rebaixada de 18 cm, incompatível com a cadeira de rodas de Ana." },
-  roberto: { score: 42, time: "10 min", effort: "Atenção alta", position: "43%,57%", reason: "A rota prioriza piso tátil, travessias sinalizadas e iluminação uniforme para Roberto." },
-  maria: { score: 48, time: "11 min", effort: "Moderado", position: "53%,48%", reason: "A IA reduziu aclives e incluiu pontos de descanso para preservar o ritmo de Dona Maria." },
-  carlos: { score: 52, time: "9 min", effort: "Moderado", position: "61%,41%", reason: "A rota de Carlos evita degraus e passagens estreitas para manter o carrinho em circulação contínua." },
+const icons = { ana: Accessibility, roberto: Eye, maria: UserRound, carlos: Baby };
+const routeNames: Record<RouteId, string> = {
+  convencional: "1 · Convencional",
+  alternativa: "2 · Alternativa",
+  inclusiva: "3 · Recomendada",
 };
-
+const routeClass: Record<RouteId, string> = {
+  convencional: "conventional",
+  alternativa: "alternative",
+  inclusiva: "recommended",
+};
+const ids: RouteId[] = ["convencional", "alternativa", "inclusiva"];
+function initialState() {
+  if (typeof window === "undefined")
+    return {
+      profile: "ana" as Profile,
+      active: [] as Work[],
+      start: "portao" as NodeId,
+      end: "biblioteca" as NodeId,
+    };
+  const query = new URLSearchParams(window.location.search);
+  const profile = profiles.find((p) => p.id === query.get("perfil"))?.id ?? "ana";
+  const active = works
+    .filter((w) => query.get("obras")?.split(",").includes(w.id))
+    .map((w) => w.id);
+  const start = places.find((p) => p.id === query.get("origem"))?.id ?? "portao";
+  const chosenEnd = places.find((p) => p.id === query.get("destino"))?.id ?? "biblioteca";
+  const end = chosenEnd === start ? (start === "biblioteca" ? "portao" : "biblioteca") : chosenEnd;
+  return { profile, active, start, end };
+}
 function Dashboard() {
+  useEffect(() => {
+    const saved = initialState();
+    setProfile(saved.profile);
+    setActive(saved.active);
+    setStart(saved.start);
+    setEnd(saved.end);
+    if (window.location.search) setCalculated(true);
+    try {
+      setPhotos(JSON.parse(localStorage.getItem("cidade-fotos-v1") ?? "{}"));
+    } catch {
+      /* armazenamento indisponível */
+    }
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
   const [profile, setProfile] = useState<Profile>("ana");
-  const [active, setActive] = useState<string[]>([]);
+  const [active, setActive] = useState<Work[]>([]);
   const [dark, setDark] = useState(false);
-  const [phoneView, setPhoneView] = useState(true);
-  const [routeView, setRouteView] = useState<RouteView>("inclusive");
-  const current = profileCopy[profile];
-  const score = Math.min(95, current.score + interventions.filter((item) => active.includes(item.id)).reduce((sum, item) => sum + item.gain, 0));
-  const selectedName = profiles.find((item) => item.id === profile)?.name ?? "Ana";
-  const explanation = useMemo(() => {
-    if (!active.length) return current.reason;
-    const names = interventions.filter((item) => active.includes(item.id)).map((item) => item.label.toLowerCase()).join(", ");
-    return `${current.reason} Após simular ${names}, o percurso alcançou ${score}% de acessibilidade.`;
-  }, [active, current.reason, score]);
-
-  function toggleIntervention(id: string) {
-    setActive((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
+  const [contrast, setContrast] = useState(false);
+  const [large, setLarge] = useState(false);
+  const [mode, setMode] = useState<"cidadao" | "gestor">("cidadao");
+  const [view, setView] = useState<RouteId | "all">("all");
+  const [selected, setSelected] = useState<Work | null>(null);
+  const [notice, setNotice] = useState("");
+  const [photos, setPhotos] = useState<Partial<Record<Work, string>>>({});
+  const [calculated, setCalculated] = useState(false);
+  const [before, setBefore] = useState(false);
+  const [start, setStart] = useState<NodeId>("portao");
+  const [end, setEnd] = useState<NodeId>("biblioteca");
+  const [animate, setAnimate] = useState(false);
+  const [realMap, setRealMap] = useState(false);
+  const [tour, setTour] = useState(0);
+  const applied = useMemo(() => (before ? [] : active), [before, active]);
+  const results = useMemo(
+    () => calculate(profile, applied, start, end),
+    [profile, applied, start, end],
+  );
+  const baseline = useMemo(() => calculate(profile, [], start, end), [profile, start, end]);
+  const current = results.inclusiva;
+  const previous = baseline.inclusiva;
+  const toggle = (id: Work) => {
+    const enabled = !active.includes(id);
+    setActive((items) => (enabled ? [...items, id] : items.filter((x) => x !== id)));
+    const work = works.find((w) => w.id === id)!;
+    setNotice(
+      `${work.label}: ${work.segment} ${enabled ? "resolvido" : "com barreira ativa"} (peso ${weights[profile][id]} para este perfil).`,
+    );
+  };
+  function share() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("perfil", profile);
+    url.searchParams.set("obras", active.join(","));
+    url.searchParams.set("origem", start);
+    url.searchParams.set("destino", end);
+    navigator.clipboard
+      .writeText(url.toString())
+      .then(() => window.alert("Link do cenário copiado."));
   }
-
-  const TripBlock = () => (
-    <div className="border-b border-border bg-card p-4 sm:p-5">
-      <p className="section-label">Trajeto microterritorial</p>
-      <div className="mt-3 space-y-2">
-        <label className="route-input text-foreground">
-          <span className="origin-dot" />
-          <span>
-            <small className="text-muted-foreground">Origem</small>
-            Portão Principal — Campus CEFET/RJ
-          </span>
-        </label>
-        <label className="route-input text-foreground">
-          <MapPin className="size-4 shrink-0 text-primary" />
-          <span>
-            <small className="text-muted-foreground">Destino</small>
-            Biblioteca Central / Bloco E
-          </span>
-        </label>
-      </div>
-    </div>
-  );
-
-  const ProfilesBlock = () => (
-    <div className="bg-card p-4 sm:p-5">
-      <p className="section-label">Perfil de mobilidade</p>
-      <div className={cn("mt-3 grid gap-2", phoneView ? "grid-cols-1" : "grid-cols-2")}>
-        {profiles.map((item) => {
-          const Icon = item.icon;
-          const selected = item.id === profile;
-          return (
-            <Button
-              key={item.id}
-              variant={selected ? "profileActive" : "profile"}
-              className="h-auto min-h-20 whitespace-normal p-3"
-              onClick={() => { setProfile(item.id); setActive([]); }}
-              aria-pressed={selected}
-            >
-              <Icon className="size-5 shrink-0" />
-              <span className="min-w-0 text-left">
-                <strong className="block text-xs">{item.name}</strong>
-                <small className="block text-[10px] leading-tight opacity-75">{item.detail}</small>
-              </span>
-            </Button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  const InterventionsBlock = () => (
-    <div className="border-t border-border bg-card p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="section-label">Intervenções</p>
-        <span className="text-[10px] font-bold text-primary">{active.length} ATIVAS</span>
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">Aplique melhorias para transformar a rota.</p>
-      <div className="mt-3 space-y-2">
-        {interventions.map((item) => {
-          const Icon = item.icon;
-          const checked = active.includes(item.id);
-          return (
-            <div key={item.id} className="intervention-row">
-              <Icon className="size-4 shrink-0 text-primary" />
-              <label htmlFor={item.id} className="min-w-0 flex-1 cursor-pointer text-xs font-semibold text-foreground">{item.label}</label>
-              <Switch id={item.id} checked={checked} onCheckedChange={() => toggleIntervention(item.id)} aria-label={item.label} />
-            </div>
-          );
-        })}
-      </div>
-      <Button className="mt-4 h-12 w-full rounded-xl text-sm font-bold" onClick={() => setActive(interventions.map((item) => item.id))}>
-        <WandSparkles className="size-4" /> Calcular Rotas Inclusivas via IA
-      </Button>
-    </div>
-  );
-
-  const RouteFiltersBlock = () => (
-    <div className="grid grid-cols-2 gap-2" aria-label="Rotas visíveis">
-      <RouteFilter active={routeView === "inclusive"} onClick={() => setRouteView("inclusive")} color="bg-route-green" icon={<Sparkles className="size-3.5" />}>IA inclusiva</RouteFilter>
-      <RouteFilter active={routeView === "conventional"} onClick={() => setRouteView("conventional")} color="bg-route-red">Convencional</RouteFilter>
-      <RouteFilter active={routeView === "alternative"} onClick={() => setRouteView("alternative")} color="bg-route-yellow">Alternativa</RouteFilter>
-      <RouteFilter active={routeView === "all"} onClick={() => setRouteView("all")} color="bg-primary" icon={<Layers3 className="size-3.5" />}>Ver todas</RouteFilter>
-    </div>
-  );
-
-  const MapBlock = () => (
-    <div className="relative">
-      <div className={cn("map-shell relative overflow-hidden rounded-[18px] border border-border", phoneView ? "h-[340px]" : "min-h-[600px]")}>
-        <CampusMap profile={profile} active={active} position={current.position} routeView={routeView} />
-        <div className="absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] rounded-xl border border-border bg-card/95 p-3 shadow-panel backdrop-blur sm:left-5 sm:top-5">
-          <div className="flex items-center gap-2 text-xs font-bold text-foreground"><span className="status-dot" />Simulação ativa · {selectedName}</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const MetricsBlock = () => (
-    <div className={cn("grid gap-3", !phoneView && "xl:grid-cols-[1.15fr_.85fr]")}>
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
-        <div className="grid grid-cols-3 gap-3">
-          <Metric label="Acessibilidade" value={`${score}%`} before={`${current.score}% antes`} accent />
-          <Metric label="Esforço físico" value={score >= 75 ? "Baixo" : current.effort} before={score >= 75 ? "Transitável" : "Requer atenção"} />
-          <Metric label="Tempo estimado" value={active.length ? `${Math.max(5, parseInt(current.time) - Math.min(3, active.length))} min` : current.time} before="Rota otimizada" />
-        </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted" aria-label={`Score de acessibilidade: ${score}%`}>
-          <div className="h-full rounded-full bg-route-green transition-[width] duration-700" style={{ width: `${score}%` }} />
-        </div>
-      </div>
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-panel">
-        <div className="flex items-center gap-2 text-xs font-bold text-foreground"><BrainCircuit className="size-4 text-primary" />Por que a IA recomendou esta rota?</div>
-        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground" aria-live="polite">“{explanation}”</p>
-      </div>
-    </div>
-  );
-
+  function exportReport() {
+    window.print();
+  }
+  function attachPhoto(id: Work, file?: File) {
+    if (!file || !file.type.startsWith("image/") || file.size > 2_000_000) {
+      setNotice("Use uma imagem de até 2 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return;
+      const next = { ...photos, [id]: reader.result };
+      try {
+        localStorage.setItem("cidade-fotos-v1", JSON.stringify(next));
+        setPhotos(next);
+        setNotice("Foto armazenada neste navegador; pendente de verificação no campus.");
+      } catch {
+        setNotice("Não foi possível armazenar a foto neste navegador.");
+      }
+    };
+    reader.readAsDataURL(file);
+  }
   return (
-    <TooltipProvider delayDuration={150}>
-      <div className={dark ? "dark" : ""}>
-        <main className="min-h-dvh bg-background p-3 text-foreground transition-colors sm:p-5 lg:p-6">
-          <div className={cn("mx-auto overflow-hidden border border-border bg-card shadow-dashboard transition-[max-width] duration-500", phoneView ? "max-w-[430px] rounded-[28px]" : "max-w-[1540px] rounded-[24px]")}>
-            <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border px-4 py-3 sm:px-6">
-              <div className="flex min-w-0 items-center gap-3">
-                <img src={logoAsset.url} alt="Cubo colorido da Equipe PIXEL" className="size-11 shrink-0 object-contain" />
-                <div className="min-w-0">
-                  <h1 className="truncate font-display text-lg font-bold text-foreground sm:text-xl">Cidade Invisível <span className="text-primary">| PIXEL</span></h1>
-                  <p className="hidden text-xs text-muted-foreground md:block">IA para Identificação e Redução de Desigualdades na Mobilidade Urbana</p>
+    <div
+      className={`${dark ? "dark " : ""}${contrast ? "high-contrast " : ""}${large ? "large-text " : ""}app-theme`}
+    >
+      <main className="app-layout">
+        <header className="app-header">
+          <div className="brand">
+            <img src="/logo.svg" alt="PIXEL" width="44" height="44" />
+            <div>
+              <h1>
+                Cidade Invisível <span>| PIXEL</span>
+              </h1>
+              <p>Roteador inclusivo e simulador de acessibilidade</p>
+            </div>
+          </div>
+          <div className="header-actions">
+            <button
+              onClick={() => setMode(mode === "cidadao" ? "gestor" : "cidadao")}
+              aria-label="Alternar modo"
+            >
+              Modo {mode === "cidadao" ? "Cidadão" : "Gestor"}
+            </button>
+            <button onClick={() => setLarge(!large)} aria-pressed={large}>
+              A+
+            </button>
+            <button onClick={() => setContrast(!contrast)} aria-pressed={contrast}>
+              Contraste
+            </button>
+            <button onClick={() => setDark(!dark)} aria-label={dark ? "Tema claro" : "Tema escuro"}>
+              {dark ? <Sun /> : <Moon />}
+            </button>
+            <button onClick={() => setTour(1)}>Tour</button>
+          </div>
+        </header>
+        <div className="workspace">
+          <section className="map-column" aria-label="Mapa e rotas">
+            <div className="map-toolbar">
+              <span>
+                <MapPin size={18} /> {places.find((p) => p.id === start)?.name} →{" "}
+                {places.find((p) => p.id === end)?.name}
+              </span>
+              <button onClick={() => setBefore(!before)} aria-pressed={before}>
+                {before ? "Ver depois" : "Ver antes"}
+              </button>
+              <button onClick={() => setAnimate(!animate)} aria-pressed={animate}>
+                {animate ? "Parar agente" : "Percorrer rota"}
+              </button>
+              <button onClick={() => setRealMap(!realMap)} aria-pressed={realMap}>
+                {realMap ? "Ver simulação" : "Ver OpenStreetMap"}
+              </button>
+            </div>
+            <div className="map-container">
+              {realMap ? (
+                <div className="osm-frame">
+                  <iframe
+                    title="Mapa OpenStreetMap do entorno do campus Maracanã"
+                    loading="lazy"
+                    src="https://www.openstreetmap.org/export/embed.html?bbox=-43.2262%2C-22.9138%2C-43.2226%2C-22.9106&layer=mapnik&marker=-22.91188%2C-43.2242"
+                  />
+                  <a
+                    href="https://www.openstreetmap.org/#map=18/-22.91188/-43.2242"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Abrir no OpenStreetMap
+                  </a>
+                  <p>
+                    Base cartográfica real do entorno. As rotas e barreiras da simulação ainda
+                    aguardam levantamento georreferenciado.
+                  </p>
                 </div>
+              ) : (
+                <CampusMap
+                  profile={profile}
+                  active={applied}
+                  view={view}
+                  start={start}
+                  end={end}
+                  animate={animate}
+                  calculated={calculated}
+                  selected={selected}
+                  onSelect={setSelected}
+                />
+              )}
+              <div className="map-legend">
+                <strong>Legenda · esquema demonstrativo</strong>
+                <span>① Contínua: convencional</span>
+                <span>② Tracejada: alternativa</span>
+                <span>③ Grossa: recomendada</span>
+                <span>! Barreira · ✓ resolvida · ● origem · ◆ destino</span>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <div className={cn("hidden items-center gap-2", !phoneView && "xl:flex")}>
-                  <span className="badge-brand">MVP Jump Start 2026</span>
-                  <span className="badge-neutral">Missão 4 — Mobilidade</span>
-                  <span className="badge-neutral">Protótipo Fase 1</span>
-                </div>
-                <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={phoneView ? "Expandir para tela ampla" : "Visualizar no formato de celular"} title={phoneView ? "Tela ampla" : "Formato de celular"} onClick={() => setPhoneView((value) => !value)}>
-                  {phoneView ? <Monitor className="size-5" /> : <Smartphone className="size-5" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={dark ? "Ativar tema claro" : "Ativar tema escuro"} onClick={() => setDark((value) => !value)}>
-                  {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
-                </Button>
-              </div>
-            </header>
-
-            {phoneView ? (
-              <div className="flex flex-col gap-3 p-3 sm:p-4">
-                <TripBlock />
-                <MapBlock />
-                <RouteFiltersBlock />
-                <ProfilesBlock />
-                <InterventionsBlock />
-                <MetricsBlock />
-              </div>
-            ) : (
-              <div className="grid lg:grid-cols-[360px_minmax(0,1fr)]">
-                <aside className="border-b border-border bg-card lg:border-r lg:border-b-0">
-                  <TripBlock />
-                  <ProfilesBlock />
-                  <InterventionsBlock />
-                </aside>
-                <section className="min-w-0 bg-map-surface p-3 sm:p-5">
-                  <div className="mb-3">
-                    <RouteFiltersBlock />
-                  </div>
-                  <MapBlock />
-                  <div className="mt-3">
-                    <MetricsBlock />
-                  </div>
-                </section>
+            </div>
+            <div className="route-buttons" aria-label="Exibir rotas">
+              {ids.map((id) => (
+                <button
+                  key={id}
+                  className={routeClass[id]}
+                  aria-pressed={view === id}
+                  onClick={() => setView(id)}
+                >
+                  {routeNames[id]}
+                </button>
+              ))}
+              <button aria-pressed={view === "all"} onClick={() => setView("all")}>
+                Ver todas
+              </button>
+            </div>
+            {selected && (
+              <div className="selection" role="status">
+                <strong>
+                  {works.find((w) => w.id === selected)!.barrier} ·{" "}
+                  {works.find((w) => w.id === selected)!.segment}
+                </strong>
+                <span>
+                  {applied.includes(selected)
+                    ? "Intervenção aplicada: barreira resolvida."
+                    : `Impacto para ${profiles.find((p) => p.id === profile)!.name}: peso ${weights[profile][selected]}.`}
+                </span>
+                {photos[selected] && (
+                  <img
+                    className="barrier-photo"
+                    src={photos[selected]}
+                    alt={`Foto enviada para ${works.find((w) => w.id === selected)!.barrier}; ainda não verificada`}
+                  />
+                )}
+                {mode === "gestor" && (
+                  <label className="photo-upload">
+                    Anexar foto da barreira (até 2 MB)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => attachPhoto(selected, event.target.files?.[0])}
+                    />
+                  </label>
+                )}
+                <button onClick={() => setSelected(null)}>Fechar</button>
               </div>
             )}
-          </div>
-        </main>
-      </div>
-    </TooltipProvider>
-  );
-}
-
-function Metric({ label, value, before, accent = false }: { label: string; value: string; before: string; accent?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <p className="truncate text-[9px] font-bold uppercase text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 truncate font-display text-lg font-bold sm:text-xl", accent && "text-route-green")}>{value}</p>
-      <p className="truncate text-[9px] text-muted-foreground">{before}</p>
-    </div>
-  );
-}
-
-function RouteFilter({ active, onClick, color, icon, children }: { active: boolean; onClick: () => void; color: string; icon?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <Button variant={active ? "secondary" : "outline"} className={cn("h-11 justify-start px-3 text-xs", active && "ring-2 ring-primary/35")} onClick={onClick} aria-pressed={active}>
-      {icon ?? <span className={cn("size-2.5 shrink-0 rounded-full", color)} />}
-      {children}
-    </Button>
-  );
-}
-
-function CampusMap({ profile, active, position, routeView }: { profile: Profile; active: string[]; position: string; routeView: RouteView }) {
-  const [x, y] = position.split(",");
-  const barriers = [
-    { id: "rampa", x: "46%", y: "30%", label: "Guia não rebaixada · 18 cm" },
-    { id: "calcada", x: "59%", y: "47%", label: "Calçada esburacada" },
-    { id: "luz", x: "70%", y: "31%", label: "Iluminação insuficiente" },
-  ];
-  return (
-    <div className="absolute inset-0">
-      <svg className="size-full" viewBox="0 0 1000 720" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Mapa estilizado do Campus CEFET/RJ com três opções de rota">
-        <rect width="1000" height="720" className="fill-map" />
-        <g className="fill-building stroke-building" strokeWidth="2">
-          <path d="M70 90h210v115H70z" /><path d="M350 65h170v150H350z" /><path d="M665 70h245v125H665z" />
-          <path d="M90 330h175v130H90z" /><path d="M380 365h180v120H380z" /><path d="M705 345h210v135H705z" />
-        </g>
-        <g className="stroke-road" strokeWidth="42" fill="none" strokeLinecap="round"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
-        <g className="stroke-road-line" strokeWidth="2" fill="none" strokeDasharray="9 12"><path d="M45 275H945"/><path d="M305 35v620"/><path d="M625 20v640"/></g>
-        <g className="fill-greenery"><circle cx="160" cy="555" r="62"/><circle cx="790" cy="590" r="72"/><circle cx="510" cy="580" r="34"/></g>
-        {(routeView === "conventional" || routeView === "all") && <path d="M95 620 C180 570 235 455 310 390 S420 245 545 280 S720 260 865 150" className="stroke-route-red route-line" />}
-        {(routeView === "alternative" || routeView === "all") && <path d="M95 620 C160 660 350 650 470 590 S740 550 865 150" className="stroke-route-yellow route-line" />}
-        {(routeView === "inclusive" || routeView === "all") && <path d="M95 620 C225 555 260 520 315 430 S470 360 555 350 S715 285 865 150" className="stroke-route-green route-line route-recommended" />}
-        <circle cx="95" cy="620" r="12" className="fill-primary stroke-card" strokeWidth="6"/><circle cx="865" cy="150" r="12" className="fill-destructive stroke-card" strokeWidth="6"/>
-        <text x="82" y="657" className="map-label">PORTÃO PRINCIPAL</text><text x="805" y="119" className="map-label">BIBLIOTECA · BLOCO E</text>
-      </svg>
-      {barriers.map((item) => !active.includes(item.id) && (
-        <Tooltip key={item.id}>
-          <TooltipTrigger asChild>
-            <button type="button" className="barrier-marker" style={{ left: item.x, top: item.y }} aria-label={item.label}>!</button>
-          </TooltipTrigger>
-          <TooltipContent><p className="text-xs">{item.label}</p></TooltipContent>
-        </Tooltip>
-      ))}
-      <div className="agent-marker" style={{ left: x, top: y }} aria-label={`Agente sintético: ${profile}`}>
-        <Accessibility className="size-5" />
-        <span>{profile === "ana" ? "ANA" : profile.toUpperCase()}</span>
-      </div>
-      {active.length > 0 && (
-        <div className="improvement-note">
-          <Sparkles className="size-4" />
-          {active.length} melhoria{active.length > 1 ? "s" : ""} simulada{active.length > 1 ? "s" : ""}
+            <p className="intervention-notice" aria-live="polite">
+              {notice}
+            </p>
+            <details className="text-map">
+              <summary>Descrição textual do mapa e das barreiras</summary>
+              <p>
+                Origem: {places.find((p) => p.id === start)?.name}. Destino:{" "}
+                {places.find((p) => p.id === end)?.name}. Os trajetos usam caminhos conectados entre
+                estes pontos. A geometria é demonstrativa e requer levantamento do campus.
+              </p>
+              <ol>
+                {ids.map((id) => (
+                  <li key={id}>
+                    {routeNames[id]}: {results[id].distance} m, {results[id].time} min,{" "}
+                    {results[id].barriers.length} barreira(s).
+                  </li>
+                ))}
+              </ol>
+              <ul>
+                {works.map((w) => (
+                  <li key={w.id}>
+                    {w.segment}: {w.barrier} — {applied.includes(w.id) ? "resolvida" : "ativa"}.
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </section>
+          <aside className="controls">
+            <section className="panel">
+              <h2>Perfil de mobilidade</h2>
+              <div className="trip-selectors">
+                <label>
+                  Origem
+                  <select value={start} onChange={(e) => setStart(e.target.value as NodeId)}>
+                    {places
+                      .filter((p) => p.id !== end)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  Destino
+                  <select value={end} onChange={(e) => setEnd(e.target.value as NodeId)}>
+                    {places
+                      .filter((p) => p.id !== start)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </div>
+              <div className="profile-grid">
+                {profiles.map((item) => {
+                  const Person = icons[item.id];
+                  return (
+                    <button
+                      key={item.id}
+                      className={profile === item.id ? "selected" : ""}
+                      aria-pressed={profile === item.id}
+                      onClick={() => setProfile(item.id)}
+                    >
+                      <Person />
+                      <span>
+                        <strong>{item.name}</strong>
+                        <small>{item.detail}</small>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                className="primary"
+                onClick={() => {
+                  setCalculated(true);
+                  setView("all");
+                }}
+              >
+                Calcular rotas
+              </button>
+              {calculated && (
+                <p role="status">
+                  Três rotas calculadas para {profiles.find((p) => p.id === profile)!.name}.
+                </p>
+              )}
+            </section>
+            {mode === "gestor" && (
+              <section className="panel">
+                <h2>Simular intervenções</h2>
+                <p>Custos ilustrativos; confirmar com orçamento e vistoria.</p>
+                {works.map((w) => (
+                  <label className="work-row" key={w.id}>
+                    <input
+                      type="checkbox"
+                      checked={active.includes(w.id)}
+                      onChange={() => toggle(w.id)}
+                    />
+                    <span>
+                      {w.label}
+                      <small>
+                        {w.segment} · R$ {w.cost.toLocaleString("pt-BR")}
+                      </small>
+                    </span>
+                  </label>
+                ))}
+                <button onClick={() => setActive(works.map((w) => w.id))}>
+                  Aplicar todas as intervenções
+                </button>
+                <button onClick={() => setActive([])}>Limpar obras</button>
+                <p role="status" aria-live="polite">
+                  {active.length} obra(s) aplicadas. Investimento estimado: R${" "}
+                  {works
+                    .filter((w) => active.includes(w.id))
+                    .reduce((n, w) => n + w.cost, 0)
+                    .toLocaleString("pt-BR")}
+                  .
+                </p>
+              </section>
+            )}
+            {calculated ? (
+              <section className="panel results">
+                <h2>Comparação das três rotas</h2>
+                <div className="table-wrap">
+                  <table>
+                    <caption>Distância, tempo, barreiras e score por rota</caption>
+                    <thead>
+                      <tr>
+                        <th>Rota</th>
+                        <th>Dist.</th>
+                        <th>Tempo</th>
+                        <th>Barreiras</th>
+                        <th>Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ids.map((id) => (
+                        <tr key={id} className={id === "inclusiva" ? "best" : ""}>
+                          <th>{routeNames[id]}</th>
+                          <td>{results[id].distance} m</td>
+                          <td>{results[id].time} min</td>
+                          <td>{results[id].barriers.length}</td>
+                          <td>{results[id].score}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="metrics">
+                  <div>
+                    <strong>{current.accessible}%</strong>
+                    <span>% de trechos acessíveis contínuos</span>
+                  </div>
+                  <div>
+                    <strong>{Math.max(0, previous.penalty - current.penalty)}</strong>
+                    <span>Redução de esforço adicional (pontos)</span>
+                  </div>
+                  <div>
+                    <strong>
+                      {current.score}%{" "}
+                      <small>
+                        {current.score - previous.score >= 0 ? "+" : ""}
+                        {current.score - previous.score}
+                      </small>
+                    </strong>
+                    <span>Score (antes: {previous.score}%)</span>
+                  </div>
+                </div>
+                <p className="explanation" aria-live="polite">
+                  {explain(profile, applied, start, end)}
+                </p>
+                <div className="before-after">
+                  <div>
+                    <strong>Antes</strong>
+                    <span>
+                      {previous.score}% · {previous.time} min · {previous.barriers.length}{" "}
+                      barreira(s)
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Depois</strong>
+                    <span>
+                      {calculate(profile, active, start, end).inclusiva.score}% ·{" "}
+                      {calculate(profile, active, start, end).inclusiva.time} min ·{" "}
+                      {calculate(profile, active, start, end).inclusiva.barriers.length} barreira(s)
+                    </span>
+                  </div>
+                </div>
+                {mode === "gestor" && (
+                  <div>
+                    <h3>Impacto por R$ 1.000</h3>
+                    <ol className="impact-list">
+                      {works
+                        .map((w) => ({
+                          ...w,
+                          gain: profiles.reduce(
+                            (sum, p) =>
+                              sum +
+                              calculate(p.id, [w.id]).convencional.score -
+                              calculate(p.id, []).convencional.score,
+                            0,
+                          ),
+                        }))
+                        .sort((a, b) => b.gain / b.cost - a.gain / a.cost)
+                        .map((w) => (
+                          <li key={w.id}>
+                            {w.label}: {((w.gain * 1000) / w.cost).toFixed(1)} pontos somados nos
+                            quatro perfis / R$ 1.000
+                          </li>
+                        ))}
+                    </ol>
+                    <small>Estimativas sintéticas; não equivalem a orçamento de obra.</small>
+                  </div>
+                )}
+                <div className="actions">
+                  <button onClick={share}>
+                    <Share2 size={16} /> Compartilhar
+                  </button>
+                  <button onClick={exportReport}>
+                    <Download size={16} /> Salvar relatório em PDF
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <section className="panel">
+                <h2>Resultado</h2>
+                <p>Escolha o perfil e clique em “Calcular rotas” para comparar os percursos.</p>
+              </section>
+            )}
+          </aside>
         </div>
-      )}
+        <footer>
+          Protótipo demonstrativo · Caminhos, obstáculos e custos sintéticos; não usar para
+          navegação real. A Biblioteca Central fica no bloco E, 4º andar, segundo o{" "}
+          <a
+            href="https://www.cefet-rj.br/biblioteca-campus-maracana"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CEFET/RJ
+          </a>
+          . Fonte de dados de campo ainda pendente. © OpenStreetMap contributors no mapa externo.
+        </footer>
+        {tour > 0 && (
+          <div
+            className="tour-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tour-title"
+          >
+            <div className="tour-card">
+              <h2 id="tour-title">Passo {tour} de 3</h2>
+              <p>
+                {
+                  [
+                    "Escolha um perfil de mobilidade e os pontos de origem e destino.",
+                    "Calcule e compare as três rotas; leia as barreiras no mapa ou na descrição textual.",
+                    "No modo Gestor, aplique uma obra e compare score, esforço, tempo e custo.",
+                  ][tour - 1]
+                }
+              </p>
+              <button onClick={() => setTour(0)}>Fechar</button>
+              {tour < 3 && (
+                <button className="primary" onClick={() => setTour(tour + 1)}>
+                  Próximo
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
     </div>
+  );
+}
+function CampusMap({
+  profile,
+  active,
+  view,
+  start,
+  end,
+  animate,
+  calculated,
+  selected,
+  onSelect,
+}: {
+  profile: Profile;
+  active: Work[];
+  view: RouteId | "all";
+  start: NodeId;
+  end: NodeId;
+  animate: boolean;
+  calculated: boolean;
+  selected: Work | null;
+  onSelect: (id: Work) => void;
+}) {
+  const results = calculate(profile, active, start, end);
+  const Icon = icons[profile];
+  const [sx, sy] = nodes[start];
+  const [ex, ey] = nodes[end];
+  const motionPath = results.inclusiva.path
+    .map((node, i) => `${i ? "L" : "M"}${nodes[node].join(" ")}`)
+    .join(" ");
+  const draw = (id: RouteId) => {
+    const result = results[id];
+    const points = result.path.map((n) => nodes[n].join(",")).join(" ");
+    return (
+      <g key={id} className={routeClass[id]}>
+        <polyline
+          points={points}
+          fill="none"
+          stroke="var(--card)"
+          strokeWidth={id === "inclusiva" ? 19 : 15}
+          strokeLinejoin="round"
+        />
+        <polyline
+          points={points}
+          fill="none"
+          className="route-path"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          strokeWidth={id === "inclusiva" ? 11 : 7}
+        />
+        <text
+          x={
+            nodes[result.path[Math.floor(result.path.length / 2)]!][0] +
+            (id === "inclusiva" ? 30 : -30)
+          }
+          y={nodes[result.path[Math.floor(result.path.length / 2)]!][1] - 24}
+          className="route-number"
+        >
+          {id === "convencional" ? "1" : id === "alternativa" ? "2" : "3"}
+        </text>
+      </g>
+    );
+  };
+  return (
+    <svg
+      viewBox="0 0 1000 720"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label={`Mapa esquemático com ${view === "all" ? "três rotas" : routeNames[view]} para ${profiles.find((p) => p.id === profile)!.name}`}
+    >
+      <rect width="1000" height="720" fill="var(--map)" />
+      <g fill="var(--building)" stroke="var(--border)" strokeWidth="2">
+        <rect x="160" y="100" width="175" height="170" rx="10" />
+        <rect x="405" y="100" width="160" height="170" rx="10" />
+        <rect x="650" y="100" width="135" height="170" rx="10" />
+        <rect x="175" y="395" width="110" height="70" rx="8" />
+        <rect x="405" y="395" width="160" height="70" rx="8" />
+        <rect x="720" y="395" width="120" height="70" rx="8" />
+      </g>
+      <g className="campus-paths">
+        {[350, 500, 620].map((y) => (
+          <line key={y} x1="95" y1={y} x2="865" y2={y} />
+        ))}
+        {[100, 340, 500, 660, 860].map((x) => (
+          <line key={x} x1={x} y1="120" x2={x} y2="625" />
+        ))}
+      </g>
+      <g aria-hidden="true" className="accessibility-features">
+        <path d="M308 334v32m8-32v32m8-32v32" stroke="var(--foreground)" strokeWidth="3" />
+        <path d="M635 480v40m12-40v40m12-40v40m12-40v40" stroke="var(--card)" strokeWidth="7" />
+        <path d="M415 500h140" stroke="var(--route-yellow)" strokeWidth="5" strokeDasharray="3 9" />
+        <text x="285" y="315" className="map-text">
+          guia
+        </text>
+        <text x="630" y="550" className="map-text">
+          faixa
+        </text>
+      </g>
+      <g className="map-labels">
+        <text x="172" y="190">
+          Bloco A
+        </text>
+        <text x="420" y="190">
+          Bloco C
+        </text>
+        <text x="660" y="190">
+          Biblioteca · Bloco E
+        </text>
+        <text x="175" y="440">
+          Cantina
+        </text>
+        <text x="720" y="440">
+          Pátio
+        </text>
+      </g>
+      {calculated &&
+        ids.filter((id) => id !== "inclusiva" && (view === "all" || view === id)).map(draw)}
+      {calculated && (view === "all" || view === "inclusiva") && draw("inclusiva")}
+      {edges
+        .filter((edge) => edge.barrier && active.includes(edge.barrier))
+        .map((edge) => (
+          <line
+            key={`${edge.a}-${edge.b}`}
+            x1={nodes[edge.a][0]}
+            y1={nodes[edge.a][1]}
+            x2={nodes[edge.b][0]}
+            y2={nodes[edge.b][1]}
+            stroke="var(--route-green)"
+            strokeWidth="5"
+            strokeDasharray="6 6"
+            aria-hidden="true"
+          />
+        ))}
+      {works.map((w) => (
+        <g
+          key={w.id}
+          className="barrier"
+          role="button"
+          tabIndex={0}
+          aria-label={`${w.segment}: ${w.barrier}, ${active.includes(w.id) ? "resolvida" : "ativa"}`}
+          onClick={() => onSelect(w.id)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onSelect(w.id);
+            }
+          }}
+        >
+          <line
+            x1={w.x}
+            y1={w.y + 15}
+            x2={w.x}
+            y2={w.y + 45}
+            stroke="var(--foreground)"
+            strokeWidth="2"
+            strokeDasharray="3 3"
+            aria-hidden="true"
+          />
+          <circle
+            cx={w.x}
+            cy={w.y}
+            r="19"
+            className={active.includes(w.id) ? "resolved" : "unresolved"}
+            stroke="var(--card)"
+            strokeWidth="4"
+          />
+          <text
+            x={w.x}
+            y={w.y + 6}
+            textAnchor="middle"
+            fill="white"
+            fontSize="21"
+            fontWeight="bold"
+          >
+            {active.includes(w.id) ? "✓" : "!"}
+          </text>
+          <text x={w.x - 18} y={w.y - 28} className="segment-label">
+            {w.segment}
+          </text>
+          {selected === w.id && (
+            <circle
+              cx={w.x}
+              cy={w.y}
+              r="25"
+              fill="none"
+              stroke="var(--foreground)"
+              strokeWidth="2"
+            />
+          )}
+        </g>
+      ))}
+      <circle cx={sx} cy={sy} r="13" fill="var(--primary)" stroke="var(--card)" strokeWidth="5" />
+      <text x={sx + 15} y={sy + 40} className="map-text">
+        ORIGEM
+      </text>
+      <rect
+        x={ex - 11}
+        y={ey - 11}
+        width="22"
+        height="22"
+        transform={`rotate(45 ${ex} ${ey})`}
+        fill="var(--destructive)"
+        stroke="var(--card)"
+        strokeWidth="4"
+      />
+      <text x={ex - 50} y={ey - 30} className="map-text">
+        DESTINO
+      </text>
+      <g transform={animate ? undefined : `translate(${sx} ${sy})`}>
+        {animate && <animateMotion dur="18s" repeatCount="indefinite" path={motionPath} />}
+        <circle r="24" fill="var(--primary)" />
+        <foreignObject x="-12" y="-12" width="24" height="24">
+          <Icon xmlns="http://www.w3.org/1999/xhtml" size={24} color="white" />
+        </foreignObject>
+        <text x="30" y="6" className="map-text">
+          {profiles.find((p) => p.id === profile)!.name}
+        </text>
+      </g>
+      <text x="925" y="58" className="map-text">
+        N ↑
+      </text>
+      <line x1="790" y1="677" x2="890" y2="677" stroke="var(--foreground)" strokeWidth="3" />
+      <text x="810" y="668" className="map-text">
+        Escala ilustrativa
+      </text>
+    </svg>
   );
 }
